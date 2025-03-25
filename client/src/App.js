@@ -1,25 +1,48 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
+import publicIp from 'public-ip';
+
+const fpPromise = FingerprintJS.load();
 
 function App() {
   const [coupon, setCoupon] = useState('');
   const [error, setError] = useState('');
 
+  const getBrowserHash = async () => {
+    const fp = await fpPromise;
+    const { visitorId } = await fp.get();
+    return visitorId;
+  };
+
+  const getIpHash = async () => {
+    const ip = await publicIp.v4();
+    return btoa(ip).slice(0, 10);
+  };
+
   const handleClaim = async () => {
     try {
-      const response = await fetch('/api/claim', { method: 'POST' });
-      const data = await response.json();
-      if (data.error) setError(data.error);
-      else setCoupon(data.coupon);
+      setError('');
+      const ipHash = await getIpHash();
+      const browserHash = await getBrowserHash();
+      
+      const { data, error } = await supabase.rpc('claim_coupon', {
+        ip: ipHash,
+        browser_hash: browserHash
+      });
+
+      if (error) throw error;
+      setCoupon(data);
     } catch (err) {
-      setError('Failed to connect to server');
+      setError(err.message);
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div className="App">
       <button onClick={handleClaim}>Claim Coupon</button>
       {coupon && <p>Your coupon: {coupon}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }
