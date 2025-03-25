@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: coupon-backend
+    plan: free  # Explicit free tier
+    runtime: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+
+  - type: static  # Change from "web" to "static"
+    name: coupon-frontend
+    plan: free  # Explicit free tier
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/build  # No "./" at the beginning
